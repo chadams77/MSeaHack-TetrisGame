@@ -22,7 +22,7 @@ OC._render = function() {
 
         this.cam = new THREE.PerspectiveCamera(60, 1.5, 0.1, 1000);
         this.cam.matrixAutoUpdate = true;
-        this.cam.position.set(0, 0, 20);
+        this.cam.position.set(10, 10, 10);
         this.cam.lookAt(new Vec3(0, 0, 0));
         this.cam.updateProjectionMatrix();
         this.cam.updateMatrix();
@@ -30,7 +30,8 @@ OC._render = function() {
         this.renderer = new THREE.WebGLRenderer({ canvas: this.c3d, alpha: true, antialias: false });
         this.renderer.setClearColor( 0x000000, 0x00 );
         this.renderer.setPixelRatio( window.devicePixelRatio );
-        this.renderer.sortObjects = true;
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
         this.raycaster = new THREE.Raycaster();
 
         this.composer = new THREE.EffectComposer( this.renderer );
@@ -49,11 +50,17 @@ OC._render = function() {
         this.viewport = null;
         this.setViewport();
 
-        this.sun = new THREE.PointLight(0xffffa0, 0.8);
-        this.sun.position.z = 30;
-        this.sun.position.y = 50;
-        this.sun.position.x = 100;
-        this.scene.add(this.sun);
+        this.light = new THREE.SpotLight(0xffffff, 1.75, 1000, Math.PI/6);
+        this.light.position.z = 100;
+        this.light.position.y = 75;
+        this.light.position.x = 100;
+        this.light.castShadow = true;
+        this.light.shadow.mapSize.width = 2048;
+        this.light.shadow.mapSize.height = 2048;
+        this.light.shadow.camera.near = 5;
+        this.light.shadow.camera.far = 50;
+        this.light.shadow.camera.fov = 60;
+        this.scene.add(this.light);
 
         window.requestAnimationFrame(this.newFrame.bind(this));
     };
