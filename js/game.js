@@ -219,6 +219,26 @@ OC._game = function() {
     };
 
     this.init = function() {
+        this.bClicked = -1;
+        if (!this.clickHandler) {
+            this.clickHandler = function(e){
+                this.bClicked = -1;
+                for (var i=0; i<this.buttons.length; i++) {
+                    var B = this.buttons[i];
+                    var x = B.x - B.size * 0.5;
+                    var y = B.y - B.size * 0.5;
+                    if (e.pageX >= x && e.pageY >= y&& e.pageX <= (x + B.size) && e.pageY <= (y + B.size)) {
+                        this.bClicked = i;
+                        console.log(i);
+                        break;
+                    }
+                }
+                e.preventDefault();
+                return false;
+            }.bind(this);
+            $(OC.render.c2d).on('touchstart', this.clickHandler);
+            $(OC.render.c2d).on('click', this.clickHandler);
+        }
         if (!this.cubeGeom) {
             this.cubeGeom = new THREE.BoxBufferGeometry( 0.9, 0.9, 0.9 );
         }
@@ -277,6 +297,22 @@ OC._game = function() {
                 })
             ];
         }
+        if (!this.images) {
+            this.images = {
+                right: 'img/right.png',
+                left: 'img/left.png',
+                up: 'img/up.png',
+                down: 'img/down.png',
+                rotxy: 'img/rotxy.png',
+                rotyz: 'img/rotyz.png',
+            };
+            for (var key in this.images) {
+                var url = this.images[key];
+                var img = new Image();
+                img.src = url;
+                this.images[key] = img;
+            }
+        }
     };
 
     this.start = function() {
@@ -312,7 +348,50 @@ OC._game = function() {
         this.drops = [];
     };
 
+    this.buttons = [ {}, {}, {}, {}, {}, {} ];
+
     this.newFrame = function(ctx, dt) {
+
+        var vpw = OC.render.viewport.x, vph = OC.render.viewport.y;
+        var bsize = Math.min(vpw, vph) * 0.15;
+
+        var B = this.buttons[0];
+        B.img = this.images.up;
+        B.x = vpw - bsize * 1.25;
+        B.y = vph - bsize * 1.75 - bsize * 0.25;
+
+        var B = this.buttons[1];
+        B.img = this.images.down;
+        B.x = vpw - bsize * 1.25;
+        B.y = vph - bsize * 0.25 - bsize * 0.25;
+
+        var B = this.buttons[2];
+        B.img = this.images.right;
+        B.x = vpw - bsize * 0.5;
+        B.y = vph - bsize * 1 - bsize * 0.25;
+
+        var B = this.buttons[3];
+        B.img = this.images.left;
+        B.x = vpw - bsize * 2;
+        B.y = vph - bsize * 1 - bsize * 0.25;
+
+        var B = this.buttons[4];
+        B.img = this.images.rotxy;
+        B.x = bsize * 0.75;
+        B.y = vph - bsize * 0.5 - bsize * 0.25;
+
+        var B = this.buttons[5];
+        B.img = this.images.rotyz;
+        B.x = bsize*2;
+        B.y = vph - bsize * 0.5 - bsize * 0.25;
+
+        for (var i=0; i<this.buttons.length; i++) {
+            var B = this.buttons[i];
+            B.size = bsize;
+            if (B.img && B.img.width && B.img.height) {
+                ctx.drawImage(B.img, 0, 0, B.img.width, B.img.height, B.x - bsize * 0.5, B.y - bsize * 0.5, bsize, bsize);
+            }
+        }
 
         ctx.font = "15px Arial";
         ctx.fillStyle = "#aaa";
