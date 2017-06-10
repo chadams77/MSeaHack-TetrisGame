@@ -41,7 +41,7 @@ OC._render = function() {
         this.effectFXAA = new THREE.ShaderPass(THREE.FXAAShader);
         this.effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight );
         this.composer.addPass( this.effectFXAA );
-        this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 2.2, 1.0, 0.85);
+        this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 1.0, 0.85);
         this.composer.addPass( this.bloomPass );
         this.copyShader = new THREE.ShaderPass(THREE.CopyShader);
         this.copyShader.renderToScreen = true;
@@ -50,7 +50,7 @@ OC._render = function() {
         this.viewport = null;
         this.setViewport();
 
-        this.light = new THREE.SpotLight(0xffffff, 1.75, 1000, Math.PI/6);
+        this.light = new THREE.SpotLight(0xffffff, 1.75, 350, Math.PI/6);
         this.light.position.z = 100;
         this.light.position.y = 75;
         this.light.position.x = 100;
@@ -95,7 +95,8 @@ OC._render = function() {
 
         window.requestAnimationFrame(this.newFrame.bind(this));
         
-        this.renderer.render(this.scene, this.cam);//this.composer.render();
+        //this.renderer.render(this.scene, this.cam);
+        this.composer.render();
         this.frame += 1;
         var time = Date.timeStamp();
         this.dt = time - this.lastTime;
