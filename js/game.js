@@ -257,6 +257,11 @@ OC._game = function() {
         this.bClicked = -1;
         if (!this.clickHandler) {
             this.clickHandler = function(e){
+                if (e.type === 'touchstart') {
+                    var touch = e.originalEvent.touches[0] || e.originalEvent.changedTouches[0];
+                    e.pageX = touch.pageX;
+                    e.pageY = touch.pageY;
+                }
                 this.bClicked = -1;
                 for (var i=0; i<this.buttons.length; i++) {
                     var B = this.buttons[i];
