@@ -13,7 +13,7 @@ OC._game = function() {
             return null;
         }
         return (x+50)+(y+50)*50+(z+50)*50*50;
-    };
+    }.bind(this);
 
     this.grid = {};
     this.gridM = {};
@@ -302,23 +302,30 @@ OC._game = function() {
                             countz += 1;
                         }
                     }
+                    var scount = 0;
                     if (countx >= this.LINE) {
                         for (var k=0; k<countx; k++) {
                             var key = KEY(x+k, y, z);
                             this.destroy(key);
                         }
+                        scount += countx;
                     }
                     if (county >= this.LINE) {
                         for (var k=0; k<county; k++) {
                             var key = KEY(x, y+k, z);
                             this.destroy(key);
                         }
+                        scount += county;
                     }
                     if (countz >= this.LINE) {
                         for (var k=0; k<countz; k++) {
                             var key = KEY(x, y, k+z);
                             this.destroy(key);
                         }
+                        scount += countz;
+                    }
+                    if (scount > 0) {
+                        this.score += ((scount - this.LINE) + 1) * 1000;
                     }
                 }
             }
@@ -362,7 +369,10 @@ OC._game = function() {
         return valid;
     };
 
+    this.dScore = this.score = 0;
+
     this.init = function() {
+        this.dScore = this.score = 0;
         this.bClicked = -1;
         if (!this.clickHandler) {
             this.clickHandler = function(e){
@@ -475,7 +485,8 @@ OC._game = function() {
             new THREE.Vector3(0, 1, 0),
             new THREE.Vector3(0, 0, 1)
         ];
-        this.ors = this.ORS[Math.floor(Math.random()*100000) % this.ORS.length];
+        this.ori = 0;
+        this.ors = this.ORS[this.ori % this.ORS.length];
 
         this.initGrid();
         this.init();
@@ -487,7 +498,8 @@ OC._game = function() {
 
     this.drops = null;
     this.drop = function() {
-        this.ors = this.ORS[Math.floor(Math.random()*100000) % this.ORS.length];
+        this.ori += 1;
+        this.ors = this.ORS[this.ori % this.ORS.length];
         this.createDropper(
             Math.floor((1-this.ors.x) * this.G_BASE * Math.random()) + this.ors.x * this.G_LIMIT,
             Math.floor((1-this.ors.y) * this.G_BASE * Math.random()) + this.ors.y * this.G_LIMIT,
@@ -498,6 +510,46 @@ OC._game = function() {
     };
 
     this.buttons = [ {}, {}, {}, {}, {}, {} ];
+
+    this.rotatexy = function(x, y, z) {
+        x -= this.dbounds[0];
+        y -= this.dbounds[2];
+        z -= this.dbounds[4];
+        var x2 = x, y2 = y, z2 = z;
+        if (this.ors.x > 0.5) {
+            z2 = (this.dbounds[5]-this.dbounds[4]) - y;
+            y2 = z;
+        }
+        else if (this.ors.y > 0.5) {
+            z2 = (this.dbounds[5]-this.dbounds[4]) - x;
+            x2 = z;
+        }
+        else if (this.ors.z > 0.5) {
+            y2 = (this.dbounds[3]-this.dbounds[2]) - x;
+            x2 = y;
+        }
+        return [x2 + this.dbounds[0], y2 + this.dbounds[2], z2 + this.dbounds[4]];
+    };
+
+    this.rotatezy = function(x, y, z) {
+        x -= this.dbounds[0];
+        y -= this.dbounds[2];
+        z -= this.dbounds[4];
+        var x2 = x, y2 = y, z2 = z;
+        if (this.ors.y > 0.5) {
+            z2 = (this.dbounds[5]-this.dbounds[4]) - y;
+            y2 = z;
+        }
+        else if (this.ors.z > 0.5) {
+            z2 = (this.dbounds[5]-this.dbounds[4]) - x;
+            x2 = z;
+        }
+        else if (this.ors.x > 0.5) {
+            y2 = (this.dbounds[3]-this.dbounds[2]) - x;
+            x2 = y;
+        }
+        return [x2 + this.dbounds[0], y2 + this.dbounds[2], z2 + this.dbounds[4]];
+    };
 
     this.newFrame = function(ctx, dt) {
 
@@ -546,8 +598,8 @@ OC._game = function() {
                 dir.z = pdir.y;
             }
             else if (this.ors.y > 0.5) {
-                dir.x = pdir.x;
-                dir.z = pdir.y;
+                dir.x = pdir.y;
+                dir.z = -pdir.x;
             }
             else if (this.ors.z > 0.5) {
                 dir.x = -pdir.x;
@@ -582,6 +634,65 @@ OC._game = function() {
             }
         }
 
+        if (this.bClicked >= 4 && this.bClicked <= 5 && this.drops && this.drops.length) {
+            var pdir = new THREE.Vector2(0, 0);
+            var maxx = -1000, maxy = -1000, maxz = -1000,
+                minx =  1000, miny =  1000, minz =  1000;
+            for (var i=0; i<this.drops.length; i++) {
+                var D = this.drops[i];
+                var t = D.obj.t || 0;
+                var it = Math.floor(D.obj.t || 0);
+                var x = D.x-this.ors.x*it, y = D.y-this.ors.y*it, z = D.z-this.ors.z*it;
+                minx = Math.min(minx, x); maxx = Math.max(maxx, x);
+                miny = Math.min(miny, y); maxy = Math.max(maxy, y);
+                minz = Math.min(minz, z); maxz = Math.max(maxz, z);
+            }
+            this.dbounds = [
+                minx, maxx,
+                miny, maxy,
+                minz, maxz
+            ];
+            var good = true;
+            for (var i=0; i<this.drops.length; i++) {
+                var D = this.drops[i];
+                var t = D.obj.t || 0;
+                var it = Math.floor(D.obj.t || 0);
+                var x = D.x-this.ors.x*it, y = D.y-this.ors.y*it, z = D.z-this.ors.z*it;
+                var r;
+                if (this.bClicked === 4) {
+                    r = this.rotatexy(x, y, z);
+                }
+                else {
+                    r = this.rotatezy(x, y, z);
+                }
+                var nkey = KEY(r[0], r[1], r[2]);
+                var obj = this.getM(nkey);
+                if (!KEY(D.x, D.y, D.z) || !nkey || (obj && !obj.dropper)) {
+                    good = false;
+                    break;
+                }   
+            }
+            if (good) {
+                for (var i=0; i<this.drops.length; i++) {
+                    var D = this.drops[i];
+                    var t = D.obj.t || 0;
+                    var it = Math.floor(D.obj.t || 0);
+                    var x = D.x-this.ors.x*it, y = D.y-this.ors.y*it, z = D.z-this.ors.z*it;
+                    var r;
+                    if (this.bClicked === 4) {
+                        r = this.rotatexy(x, y, z);
+                    }
+                    else {
+                        r = this.rotatezy(x, y, z);
+                    }
+                    this.move(KEY(D.x, D.y, D.z), KEY(r[0], r[1], r[2]));
+                    D.x = r[0]; D.y = r[1]; D.z = r[2];
+                    D.obj.t = t - it;
+                }
+                this.finishMove();
+            }
+        }
+
         this.bClicked = -1;
 
         for (var i=0; i<this.buttons.length; i++) {
@@ -594,7 +705,16 @@ OC._game = function() {
 
         ctx.font = "15px Arial";
         ctx.fillStyle = "#aaa";
-        ctx.fillText(Math.floor(1/dt) + "fps " + this.ors.x + ',' + this.ors.y + ',' + this.ors.z, 15, 30);
+        ctx.textAlign = 'left';
+        //ctx.fillText(Math.floor(1/dt) + "fps " + this.ors.x + ',' + this.ors.y + ',' + this.ors.z, 15, 30);
+        ctx.fillText(Math.floor(1/dt) + "fps", 15, 30);
+
+        this.dScore += (this.score - this.dScore) * dt;
+
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = 'right';
+        ctx.fillText("Score: " + Math.ceil(this.dScore), vpw-15, 15+30);
 
         for (var x=-this.G_LIMIT; x<=this.G_LIMIT; x++) {
             for (var y=-this.G_LIMIT; y<=this.G_LIMIT; y++) {
@@ -632,9 +752,9 @@ OC._game = function() {
         var cam = OC.render.cam;
 
         cam.up.set(
-            cam.up.x + (this.ors.x - cam.up.x) * dt * 3.0,
-            cam.up.y + (this.ors.y - cam.up.y) * dt * 3.0,
-            cam.up.z + (this.ors.z - cam.up.z) * dt * 3.0
+            cam.up.x + (this.ors.x - cam.up.x) * dt * 1.5,
+            cam.up.y + (this.ors.y - cam.up.y) * dt * 1.5,
+            cam.up.z + (this.ors.z - cam.up.z) * dt * 1.5
         );
         cam.lookAt(new Vec3(0, 0, 0));
         cam.updateProjectionMatrix();
