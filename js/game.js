@@ -115,6 +115,8 @@ OC._game = function() {
             this.gridD[M[0]] = M[4];
         }
         this.moveBuffer = [];
+
+        OC.sound.play(36, .05, 5);
     }
 
     this.updateM = function(x, y, z, dt) {
@@ -242,6 +244,7 @@ OC._game = function() {
                 v.mesh.T = 0;
                 this.dlist.push(v.mesh);
                 v.destroyed = true;
+                OC.sound.play(40, .2, 5);
             }
             this.set(key, 0);
         }
@@ -252,6 +255,7 @@ OC._game = function() {
         if (!this.drops) {
             return;
         }
+        OC.sound.play(35, .05, 5);
         for (var i=0; i<this.drops.length; i++) {
             this.drops[i].obj.dropper = false;
             this.set(KEY(this.drops[i].x, this.drops[i].y, this.drops[i].z), 0);
@@ -395,7 +399,7 @@ OC._game = function() {
                 return false;
             }.bind(this);
             $(OC.render.c2d).on('touchstart', this.clickHandler);
-            $(OC.render.c2d).on('click', this.clickHandler);
+            $(OC.render.c2d).on('mousedown', this.clickHandler);
         }
         if (!this.cubeGeom) {
             this.cubeGeom = new THREE.BoxBufferGeometry( 0.9, 0.9, 0.9 );
@@ -500,12 +504,17 @@ OC._game = function() {
     this.drop = function() {
         this.ori += 1;
         this.ors = this.ORS[this.ori % this.ORS.length];
-        this.createDropper(
+        if (!this.createDropper(
             Math.floor((1-this.ors.x) * this.G_BASE * Math.random()) + this.ors.x * this.G_LIMIT,
             Math.floor((1-this.ors.y) * this.G_BASE * Math.random()) + this.ors.y * this.G_LIMIT,
             Math.floor((1-this.ors.z) * this.G_BASE * Math.random()) + this.ors.z * this.G_LIMIT,
             this.D_SIZE, 1 + ~~(Math.random()*6)
-        );
+        )) {
+            OC.sound.play(31, .2, 5);
+            OC.sound.play(30, .2, 5 + 0.25);
+            OC.sound.play(29, .2, 5 + 0.5);
+            OC.sound.play(28, .2, 5 + 0.75);
+        };
         this.drops = [];
     };
 
@@ -554,7 +563,7 @@ OC._game = function() {
     this.newFrame = function(ctx, dt) {
 
         var vpw = OC.render.viewport.x, vph = OC.render.viewport.y;
-        var bsize = Math.min(vpw, vph) * 0.15;
+        var bsize = Math.min(vpw, vph) * 0.175;
 
         var B = this.buttons[0];
         B.img = this.images.up;
@@ -706,7 +715,7 @@ OC._game = function() {
         ctx.font = "15px Arial";
         ctx.fillStyle = "#aaa";
         ctx.textAlign = 'left';
-        //ctx.fillText(Math.floor(1/dt) + "fps " + this.ors.x + ',' + this.ors.y + ',' + this.ors.z, 15, 30);
+        //  ctx.fillText(Math.floor(1/dt) + "fps " + this.ors.x + ',' + this.ors.y + ',' + this.ors.z, 15, 30);
         ctx.fillText(Math.floor(1/dt) + "fps", 15, 30);
 
         this.dScore += (this.score - this.dScore) * dt;
