@@ -1,0 +1,26 @@
+<html>
+    <head>
+        <title>Octika - By chadams</title>
+
+        <script src="js/lib/jquery-1.12.4.min.js"></script>
+        <script src="js/lib/three.js"></script>
+        <script src="js/lib/three-postproc.js"></script>
+        <script src="js/lib/threex.dynamictexture.js"></script>
+
+        <script src="js/game.js"></script>
+        <script src="js/render.js"></script>
+
+        <link rel="stylesheet" type="text/css" href="css/main.css">
+
+        <script>
+            $(document).ready(function(){
+                OC.render.init($('#c2d')[0], $('#c3d')[0]);
+                OC.game.start();
+            });
+        </script>
+    </head>
+    <body>
+        <canvas id="c3d" width="800" height="800"></canvas>
+        <canvas id="c2d" width="800" height="800"></canvas>
+    </body>
+</html>
