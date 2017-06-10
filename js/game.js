@@ -82,6 +82,41 @@ OC._game = function() {
         return this.gridM[key] || null;
     };
 
+    this.moveBuffer = [];
+
+    this.move = function(keys, keyd) {
+        if (!keys || !keyd) {
+            return false;
+        }
+        this.moveBuffer.push([
+            keyd,
+            keys,
+            this.gridM[keys],
+            this.grid[keys],
+            this.gridD[keys]
+        ]);
+        return true;
+    };
+
+    this.finishMove = function() {
+        if (!this.moveBuffer) {
+            return;
+        }
+        for (var i=0; i<this.moveBuffer.length; i++) {
+            var M = this.moveBuffer[i];
+            this.gridM[M[1]] = null;
+            this.grid[M[1]] = null;
+            this.gridD[M[1]] = null;
+        }
+        for (var i=0; i<this.moveBuffer.length; i++) {
+            var M = this.moveBuffer[i];
+            this.gridM[M[0]] = M[2];
+            this.grid[M[0]] = M[3];
+            this.gridD[M[0]] = M[4];
+        }
+        this.moveBuffer = [];
+    }
+
     this.updateM = function(x, y, z, dt) {
         var key = KEY(x,y,z);
         if (!key) {
@@ -227,9 +262,8 @@ OC._game = function() {
                     var B = this.buttons[i];
                     var x = B.x - B.size * 0.5;
                     var y = B.y - B.size * 0.5;
-                    if (e.pageX >= x && e.pageY >= y&& e.pageX <= (x + B.size) && e.pageY <= (y + B.size)) {
+                    if (e.pageX >= x && e.pageY >= y && e.pageX <= (x + B.size) && e.pageY <= (y + B.size)) {
                         this.bClicked = i;
-                        console.log(i);
                         break;
                     }
                 }
@@ -385,6 +419,56 @@ OC._game = function() {
         B.x = bsize*2;
         B.y = vph - bsize * 0.5 - bsize * 0.25;
 
+        if (this.bClicked >= 0 && this.bClicked <= 3 && this.drops) {
+            var pdir = new THREE.Vector2(0, 0);
+            if (this.bClicked === 0) { pdir.x = 0; pdir.y = -1; }
+            else if (this.bClicked === 1) { pdir.x = 0; pdir.y = 1; }
+            else if (this.bClicked === 3) { pdir.x = -1; pdir.y = 0; }
+            else if (this.bClicked === 2) { pdir.x = 1; pdir.y = 0; }
+            var dir = new THREE.Vector3(0, 0, 0);
+            if (this.ors.x > 0.5) {
+                dir.y = -pdir.x;
+                dir.z = pdir.y;
+            }
+            else if (this.ors.y > 0.5) {
+                dir.x = pdir.x;
+                dir.z = pdir.y;
+            }
+            else if (this.ors.z > 0.5) {
+                dir.x = -pdir.x;
+                dir.y = pdir.y;
+            }
+            var good = true;
+            for (var i=0; i<this.drops.length; i++) {
+                var D = this.drops[i];
+                var t = D.obj.t || 0;
+                var it = Math.floor(D.obj.t || 0);
+                var x = D.x-this.ors.x*it, y = D.y-this.ors.y*it, z = D.z-this.ors.z*it;
+                var nx = x + dir.x, ny = y + dir.y, nz = z + dir.z;
+                var nkey = KEY(nx, ny, nz);
+                var obj = this.getM(nkey);
+                if (!nkey || (obj && !obj.dropper)) {
+                    good = false;
+                    break;
+                }
+            }
+            if (good) {
+                for (var i=0; i<this.drops.length; i++) {
+                    var D = this.drops[i];
+                    var t = D.obj.t || 0;
+                    var it = Math.floor(D.obj.t || 0);
+                    var x = D.x-this.ors.x*it, y = D.y-this.ors.y*it, z = D.z-this.ors.z*it;
+                    var nx = x + dir.x, ny = y + dir.y, nz = z + dir.z;
+                    this.move(KEY(D.x, D.y, D.z), KEY(nx, ny, nz));
+                    D.x = nx; D.y = ny; D.z = nz;
+                    D.obj.t = t - it;
+                }
+                this.finishMove();
+            }
+        }
+
+        this.bClicked = -1;
+
         for (var i=0; i<this.buttons.length; i++) {
             var B = this.buttons[i];
             B.size = bsize;
@@ -395,7 +479,7 @@ OC._game = function() {
 
         ctx.font = "15px Arial";
         ctx.fillStyle = "#aaa";
-        ctx.fillText(Math.floor(1/dt) + "fps", 15, 30);
+        ctx.fillText(Math.floor(1/dt) + "fps " + this.ors.x + ',' + this.ors.y + ',' + this.ors.z, 15, 30);
 
         for (var x=-this.G_LIMIT; x<=this.G_LIMIT; x++) {
             for (var y=-this.G_LIMIT; y<=this.G_LIMIT; y++) {
