@@ -20,7 +20,7 @@ OC._render = function() {
 
         this.scene = new THREE.Scene();
 
-        this.cam = new THREE.PerspectiveCamera(60, 1.5, 0.1, 1000);
+        this.cam = new THREE.PerspectiveCamera(60, 1.5, 0.1, 256);
         this.cam.matrixAutoUpdate = true;
         this.cam.position.set(10, 10, 10);
         this.cam.lookAt(new Vec3(0, 0, 0));

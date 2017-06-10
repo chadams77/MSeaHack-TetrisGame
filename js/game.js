@@ -141,9 +141,9 @@ OC._game = function() {
         }
         else if (type <= 0 && obj) {
             // remove
-            obj.mesh.material = null;
-            obj.mesh.geometry = null;
-            OC.render.scene.remove(obj.mesh);
+            if (!obj.destroyed) {
+                OC.render.scene.remove(obj.mesh);
+            }
             obj.mesh = null;
             obj.dropper = false;
             obj = null;
@@ -183,6 +183,14 @@ OC._game = function() {
             );
             obj.mesh.updateMatrix();
         }
+        else if (obj) {
+            obj.mesh.position.set(
+                x,
+                y,
+                z
+            );
+            obj.mesh.updateMatrix();
+        }
     };
 
     this.checkDrops = function(x, y, z, dt) {
@@ -200,12 +208,7 @@ OC._game = function() {
                 var key2 = KEY(x-this.ors.x*t, y-this.ors.y*t, z-this.ors.z*t);
                 if ((v = this.getM(key2)) && (this.get(key2)) && !v.dropper) {
                     if ((obj.t+1) >= t) {
-                        for (var i=0; i<this.drops.length; i++) {
-                            this.drops[i].obj.dropper = false;
-                            this.set(KEY(this.drops[i].x, this.drops[i].y, this.drops[i].z), 0);
-                            this.set(KEY(this.drops[i].x-this.ors.x*(t-1), this.drops[i].y-this.ors.y*(t-1), this.drops[i].z-this.ors.z*(t-1)), this.drops[i].clr);
-                        }
-                        this.drops = null;
+                        this.finishDrop(t);
                     }
                     else {
                         v.under = true;
@@ -213,7 +216,113 @@ OC._game = function() {
                     break;
                 }
             }
+            if (this.ors.x > 0.5) {
+                if ((x-obj.t) <= -this.G_BASE) {
+                    this.finishDrop(Math.ceil(obj.t));
+                }
+            }
+            else if (this.ors.y > 0.5) {
+                if ((y-obj.t) <= -this.G_BASE) {
+                    this.finishDrop(Math.ceil(obj.t));
+                }
+            }
+            else if (this.ors.z > 0.5) {
+                if ((z-obj.t) <= -this.G_BASE) {
+                    this.finishDrop(Math.ceil(obj.t));
+                }
+            }
         }
+    };
+
+    this.dlist = [];
+    this.destroy = function(key) {
+        var v = this.getM(key);
+        if (v) {
+            if (v.mesh) {
+                v.mesh.T = 0;
+                this.dlist.push(v.mesh);
+                v.destroyed = true;
+            }
+            this.set(key, 0);
+        }
+    };
+
+    this.shouldCheckLines = 0;
+    this.finishDrop = function(t) {
+        if (!this.drops) {
+            return;
+        }
+        for (var i=0; i<this.drops.length; i++) {
+            this.drops[i].obj.dropper = false;
+            this.set(KEY(this.drops[i].x, this.drops[i].y, this.drops[i].z), 0);
+            this.set(KEY(this.drops[i].x-this.ors.x*(t-1), this.drops[i].y-this.ors.y*(t-1), this.drops[i].z-this.ors.z*(t-1)), this.drops[i].clr);
+        }
+        this.drops = null;
+        this.shouldCheckLines = 3;
+    };
+
+    this.checkLines = function() {
+        if (this.shouldCheckLines !== 1) {
+            if (this.shouldCheckLines > 1) {
+                this.shouldCheckLines -= 1;
+            }
+            return;
+        }
+        this.shouldCheckLines = false;
+        for (var x=-this.G_LIMIT; x<=this.G_LIMIT; x++) {
+            for (var y=-this.G_LIMIT; y<=this.G_LIMIT; y++) {
+                for (var z=-this.G_LIMIT; z<=this.G_LIMIT; z++) {
+                    var countx = 0;
+                    for (var k=0; k<this.G_LIMIT*3; k++) {
+                        var key = KEY(x+k, y, z);
+                        if (!key || !this.get(key)) {
+                            break;
+                        }
+                        else {
+                            countx += 1;
+                        }
+                    }
+                    var county = 0;
+                    for (var k=0; k<this.G_LIMIT*3; k++) {
+                        var key = KEY(x, y+k, z);
+                        if (!key || !this.get(key)) {
+                            break;
+                        }
+                        else {
+                            county += 1;
+                        }
+                    }
+                    var countz = 0;
+                    for (var k=0; k<this.G_LIMIT*3; k++) {
+                        var key = KEY(x, y, z+k);
+                        if (!key || !this.get(key)) {
+                            break;
+                        }
+                        else {
+                            countz += 1;
+                        }
+                    }
+                    if (countx >= this.LINE) {
+                        for (var k=0; k<countx; k++) {
+                            var key = KEY(x+k, y, z);
+                            this.destroy(key);
+                        }
+                    }
+                    if (county >= this.LINE) {
+                        for (var k=0; k<county; k++) {
+                            var key = KEY(x, y+k, z);
+                            this.destroy(key);
+                        }
+                    }
+                    if (countz >= this.LINE) {
+                        for (var k=0; k<countz; k++) {
+                            var key = KEY(x, y, k+z);
+                            this.destroy(key);
+                        }
+                    }
+                }
+            }
+        }        
     }
 
     this.createDropper = function(x, y, z, n, clr) {
@@ -356,7 +465,8 @@ OC._game = function() {
 
     this.start = function() {
         this.G_LIMIT = 8;
-        this.G_BASE = 2;
+        this.G_BASE = 1;
+        this.LINE = 4;
         this.G_SIZE = 1 + this.G_LIMIT * 2;
         this.D_SIZE = 4;
 
@@ -494,11 +604,28 @@ OC._game = function() {
             }
         }
 
+        this.checkLines();
+
         for (var x=-this.G_LIMIT; x<=this.G_LIMIT; x++) {
             for (var y=-this.G_LIMIT; y<=this.G_LIMIT; y++) {
                 for (var z=-this.G_LIMIT; z<=this.G_LIMIT; z++) {
                     this.checkDrops(x, y, z, dt);
                 }
+            }
+        }
+
+        for (var i=0; i<this.dlist.length; i++) {
+            var D = this.dlist[i];
+            D.T += dt;
+            if (D.T > 1.0) {
+                OC.render.scene.remove(D);
+                this.dlist.splice(i, 1);
+                i --;
+                continue;
+            }
+            else {
+                var t = Math.pow(1-D.T, 3.0) + 0.001;
+                D.scale.set(t, t, t);
             }
         }
 
@@ -513,7 +640,7 @@ OC._game = function() {
         cam.updateProjectionMatrix();
         cam.updateMatrix();
 
-        if (!this.drops) {
+        if (!this.drops && !this.shouldCheckLines) {
             this.drop();
         }
 
