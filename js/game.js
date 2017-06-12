@@ -26,7 +26,7 @@ OC._game = function() {
         for (var x=-this.G_BASE; x<=this.G_BASE; x++) {
             for (var y=-this.G_BASE; y<=this.G_BASE; y++) {
                 for (var z=-this.G_BASE; z<=this.G_BASE; z++) {
-                    this.set(KEY(x, y, z), ~~(Math.random()*6));
+                    this.set(KEY(x, y, z), 1 + Math.floor(Math.random()*5));
                 }
             }
         }
@@ -237,6 +237,7 @@ OC._game = function() {
     };
 
     this.dlist = [];
+    this.recentDestroy = 0;
     this.destroy = function(key) {
         var v = this.getM(key);
         if (v) {
@@ -244,7 +245,13 @@ OC._game = function() {
                 v.mesh.T = 0;
                 this.dlist.push(v.mesh);
                 v.destroyed = true;
-                OC.sound.play(40, .2, 5);
+                if (this.lost) {
+                    OC.sound.play(45 - (this.recentDestroy % 30), .2, 5, this.recentDestroy/16);
+                }
+                else {
+                    OC.sound.play(30 + this.recentDestroy, .2, 5, this.recentDestroy/16);
+                }
+                this.recentDestroy += 1;
             }
             this.set(key, 0);
         }
@@ -259,6 +266,8 @@ OC._game = function() {
         for (var i=0; i<this.drops.length; i++) {
             this.drops[i].obj.dropper = false;
             this.set(KEY(this.drops[i].x, this.drops[i].y, this.drops[i].z), 0);
+        }
+        for (var i=0; i<this.drops.length; i++) {
             this.set(KEY(this.drops[i].x-this.ors.x*(t-1), this.drops[i].y-this.ors.y*(t-1), this.drops[i].z-this.ors.z*(t-1)), this.drops[i].clr);
         }
         this.drops = null;
@@ -334,6 +343,18 @@ OC._game = function() {
                 }
             }
         }        
+        for (var x=-this.G_LIMIT; x<=this.G_LIMIT; x++) {
+            for (var y=-this.G_LIMIT; y<=this.G_LIMIT; y++) {
+                for (var z=-this.G_LIMIT; z<=this.G_LIMIT; z++) {
+                    if (this.get(KEY(x,y,z)) && !this.get(KEY(x-1, y, z)) && !this.get(KEY(x+1, y, z))
+                                             && !this.get(KEY(x, y-1, z)) && !this.get(KEY(x, y+1, z))
+                                             && !this.get(KEY(x, y, z-1)) && !this.get(KEY(x, y, z+1))) {
+                        this.score += 500;
+                        this.destroy(KEY(x,y,z));
+                    }
+                }
+            }
+        }
     }
 
     this.createDropper = function(x, y, z, n, clr) {
@@ -375,11 +396,17 @@ OC._game = function() {
 
     this.dScore = this.score = 0;
 
+    this.soundOn = false;
+
     this.init = function() {
         this.dScore = this.score = 0;
         this.bClicked = -1;
         if (!this.clickHandler) {
             this.clickHandler = function(e){
+                if (!this.soundOn) {
+                    OC.sound.play(31, .2, 5, 0);
+                    this.soundOn = true;
+                }
                 if (e.type === 'touchstart') {
                     var touch = e.originalEvent.touches[0] || e.originalEvent.changedTouches[0];
                     e.pageX = touch.pageX;
@@ -496,24 +523,38 @@ OC._game = function() {
         this.init();
 
         this.drops = null;
+        this.score = 0;
 
         this.playing = true;
+        this.lost = false;
     };
 
     this.drops = null;
+    this.lost = false;
     this.drop = function() {
         this.ori += 1;
-        this.ors = this.ORS[this.ori % this.ORS.length];
+        this.ors = this.ORS[Math.floor(this.ori/3) % this.ORS.length];
         if (!this.createDropper(
             Math.floor((1-this.ors.x) * this.G_BASE * Math.random()) + this.ors.x * this.G_LIMIT,
             Math.floor((1-this.ors.y) * this.G_BASE * Math.random()) + this.ors.y * this.G_LIMIT,
             Math.floor((1-this.ors.z) * this.G_BASE * Math.random()) + this.ors.z * this.G_LIMIT,
             this.D_SIZE, 1 + ~~(Math.random()*6)
         )) {
-            OC.sound.play(31, .2, 5);
-            OC.sound.play(30, .2, 5 + 0.25);
-            OC.sound.play(29, .2, 5 + 0.5);
-            OC.sound.play(28, .2, 5 + 0.75);
+            OC.sound.play(31, .2, 5, 0);
+            OC.sound.play(30, .2, 5, 0.75);
+            OC.sound.play(29, .2, 5, 1.5);
+            OC.sound.play(28, .2, 5, 2.25);
+            this.lost = true;
+            this.lostTime = Date.timeStamp();
+            for (var x=-this.G_LIMIT; x<=this.G_LIMIT; x++) {
+                for (var y=-this.G_LIMIT; y<=this.G_LIMIT; y++) {
+                    for (var z=-this.G_LIMIT; z<=this.G_LIMIT; z++) {
+                        if (this.get(KEY(x, y, z))) {
+                            this.destroy(KEY(x, y, z));
+                        }
+                    }
+                }
+            }
         };
         this.drops = [];
     };
@@ -772,6 +813,11 @@ OC._game = function() {
         if (!this.drops && !this.shouldCheckLines) {
             this.drop();
         }
+        if (this.lost && Date.timeStamp() > (this.lostTime+5)) {
+            this.start();
+        }
+
+        this.recentDestroy = 0;
 
     }.bind(this);
 

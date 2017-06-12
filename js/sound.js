@@ -32,9 +32,9 @@ OC._sound.prototype.update = function(dt) {
         this.play(note+3, 0.04, 3.0, this.lastNote + 1/2);
     }
 };
-OC._sound.prototype.play = function(int, amp, length, offset) {
+OC._sound.prototype.play = function(int, amp, length, toffset) {
     var audioCtx = this.audioCtx;
-    var time = offset ? offset : audioCtx.currentTime;
+    var time = toffset ? (toffset + audioCtx.currentTime) : audioCtx.currentTime;
     var length = length || 1.0;
     var osc = audioCtx.createOscillator();
     var offset = int % this.music_scale.length;
