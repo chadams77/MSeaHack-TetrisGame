@@ -48,8 +48,8 @@ OC._sound.prototype.play = function(int, amp, length, toffset) {
 
     osc.start(time);
 
-    for (var i=0; i<32; i++) {
-        gain.gain.setValueAtTime(0.35 * amp * Math.pow(1 - (i/32), 8.0), time + i/32);
+    for (var i=0; i<8; i++) {
+        gain.gain.setValueAtTime(0.35 * amp * Math.pow(1 - (i/8), 8.0), time + i/8);
     }
 
     window.setTimeout(function(){
