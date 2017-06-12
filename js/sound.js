@@ -49,7 +49,7 @@ OC._sound.prototype.play = function(int, amp, length, toffset) {
     osc.start(time);
 
     for (var i=0; i<32; i++) {
-        gain.gain.setValueAtTime(0.65 * amp * Math.pow(1 - (i/32), 8.0), time + i/32);
+        gain.gain.setValueAtTime(0.35 * amp * Math.pow(1 - (i/32), 8.0), time + i/32);
     }
 
     window.setTimeout(function(){
